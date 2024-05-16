@@ -56,6 +56,13 @@ namespace CANSlaveShimAPI
 
     public class CANSlaveRepo
     {
+        private readonly ILogger<CANSlaveRepo> _logger;
+
+        public CANSlaveRepo(ILogger<CANSlaveRepo> logger)
+        {
+            _logger = logger;
+        }
+
         ConcurrentDictionary<(int index, int subIndex), string> _values 
             = new ConcurrentDictionary<(int index, int subIndex), string>();
 
@@ -64,13 +71,15 @@ namespace CANSlaveShimAPI
 
         public Task<string?> GetAsync(int network, int node, int index, int subindex)
         {
-            if (_values.TryGetValue((index, subindex), out string? value))
-                return Task.FromResult((string?)value);
-            return Task.FromResult((string?)null);
+            if (!_values.TryGetValue((index, subindex), out string? value))
+                _logger?.LogWarning("No Value {network} {node} {index} {subindex}", network, node, index,  subindex);
+            _logger?.LogInformation("Read {network} {node} {index} {subindex} - {value}", network, node, index,  subindex, value);
+            return Task.FromResult(value);
         }
 
         public Task PutAsync(int network, int node, int index, int subindex, string value)
         {
+            _logger?.LogInformation("Write {network} {node} {index} {subindex} - {value}", network, node, index,  subindex, value);
             _values.AddOrUpdate((index, subindex), value, (key, oldValue) => value);
             return Task.CompletedTask;
         }
